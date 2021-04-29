@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="C:/Users/Usuario/Documents/Data analytics/Bancos de dados/olist_ecommerce.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="125"/><column_width id="3" width="2270"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,23:mainolist_customers_dataset"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="olist_customers_dataset" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="295"/><column index="2" value="295"/><column index="3" value="239"/><column index="4" value="197"/><column index="5" value="144"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="Exercício 1">SELECT
+	Item,
+	Pedido,
+	Estado_Cliente,
+	Estado_Seller,
+	(Data_Expedicao - Data_Aprovacao) as Prazo_Postagem,
+	CASE
+		WHEN Data_Entrega &gt; Data_Prometida THEN 'Pedido Atrasado'
+		ELSE 'Pedido no prazo'
+	END as Check_Atraso
+FROM
+	(
+	SELECT
+		product_id as Item,
+		ord_it.order_id as Pedido,
+		customer_state as Estado_Cliente,
+		seller_state as Estado_Seller,
+		julianday (substr (order_approved_at, 0, 11)) as Data_Aprovacao,
+		julianday (substr (order_delivered_carrier_date, 0, 11)) as Data_Expedicao,
+		substr(replace (order_delivered_customer_date, '-', ''), 0, 9) as Data_Entrega,
+		substr(replace (order_estimated_delivery_date, '-', ''), 0, 9) as Data_Prometida
+	FROM
+		olist_order_items_dataset as ord_it
+	LEFT JOIN
+		olist_sellers_dataset as sel
+		on ord_it.seller_id = sel.seller_id
+	LEFT JOIN
+		olist_orders_dataset as ord
+		on ord_it.order_id = ord.order_id
+	LEFT JOIN
+		olist_customers_dataset as cust
+		on ord.customer_id = cust.customer_id
+	) as Tab	
+WHERE Estado_Cliente &lt;&gt; Estado_Seller
+ORDER by Item, Estado_Cliente, Estado_Seller</sql><sql name="Exercício 2">SELECT
+	Cliente,
+	Pagamento,
+	Data_Aprovacao,
+	Valor_Pedido,
+	Valor_Total
+FROM
+	(
+	SELECT
+		ord.customer_id as Cliente,
+		pay.order_id as Pagamento,
+		order_approved_at as Data_Aprovacao,
+		payment_value as Valor_Pedido,
+		sum (payment_value) over (partition by pay.order_id) as Valor_Total
+	FROM
+		olist_orders_dataset as ord
+	LEFT JOIN
+		olist_customers_dataset as cust
+		on ord.customer_id = cust.customer_id
+	LEFT JOIN
+		olist_order_payments_dataset as pay
+		on pay.order_id = ord.order_id		
+		) as Tab
+WHERE Valor_Pedido &lt;&gt; Valor_Total
+ORDER by Pagamento DESC
+</sql><sql name="Exercício 3">SELECT
+	Categoria,
+	Valor_Total,
+	rank () over (partition by Chave order by Valor_Total desc) as Ranking,
+	sum (Valor_Total) over (partition by Chave order by Valor_Total desc) as Valor_Acumulado	
+FROM
+	(
+	SELECT
+		'a' as Chave,
+		product_category_name as Categoria,
+		sum (price) as Valor_Total
+	FROM
+		olist_order_items_dataset as ord
+	LEFT JOIN
+		olist_products_dataset as prod
+		on ord.product_id = prod.product_id
+	WHERE product_category_name is not null
+	GROUP by product_category_name
+	) as Tab
+
+
+</sql><current_tab id="0"/></tab_sql></sqlb_project>
